@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'brand',
+    'inventory',
 ]
 
 MIDDLEWARE = [
@@ -75,11 +76,16 @@ WSGI_APPLICATION = 'socialscope.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'socialscope',
+        'USER': 'myuser',
+        'PASSWORD': 'amma123',
+        'HOST': 'localhost',  # Use '127.0.0.1' if needed
+        'PORT': '5432',  # Default PostgreSQL port
     }
 }
-
+#'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
