@@ -1,4 +1,5 @@
 from django.db import models
+from user.models import CustomUser  # Import CustomUser from user app
 
 # Create your models here.
 class ProductsInventory(models.Model):
@@ -8,6 +9,7 @@ class ProductsInventory(models.Model):
         #('person', 'person')
     ]
 
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)  # Foreign key reference
     item_id = models.AutoField(primary_key=True)
     item_name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -16,4 +18,4 @@ class ProductsInventory(models.Model):
     icon = models.ImageField(upload_to='product_icons/', blank=True, null=True)
 
     def __str__(self):
-        return self.item_name
+        return f"{self.item_name} - {self.user.email}"
