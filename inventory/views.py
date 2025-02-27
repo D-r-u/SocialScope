@@ -15,7 +15,7 @@ def add_product(request):
 
 def product_list(request):
     products = ProductsInventory.objects.filter(user=request.user)  # Fetch products for the logged-in user
-    return render(request, 'inventory/product_list.html', {'products': products})
+    return render(request, 'product_list.html', {'products': products})
 
 def delete_inventory(request, product_id):
     product = get_object_or_404(ProductsInventory, id=product_id, user=request.user)
