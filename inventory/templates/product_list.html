@@ -17,8 +17,8 @@
     <ul>
         {% for product in products %}
             <li>
-                {{ product.item_name }} - {{ product.description }}
-                <form action="{% url 'delete-inventory' product.id %}" method="POST" style="display:inline;">
+                <a href="{% url 'sentiment-analysis' product.item_id %}">{{ product.item_name }}</a> - {{ product.description }}
+                <form action="{% url 'delete-inventory' product.item_id %}" method="POST" style="display:inline;">
                     {% csrf_token %}
                     <button type="submit">Delete</button>
                 </form>
@@ -27,5 +27,6 @@
             <p>No products found.</p>
         {% endfor %}
     </ul>
+    
 </body>
 </html>

@@ -5,3 +5,4 @@ class ProductsInventoryForm(forms.ModelForm):
     class Meta:
         model = ProductsInventory
         fields = ['item_name', 'description', 'item_type', 'icon']
+        exclude = ['user']
