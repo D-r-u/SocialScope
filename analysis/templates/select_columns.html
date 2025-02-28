@@ -1,0 +1,30 @@
+<h1>Select Columns</h1>
+{% if columns %}
+    <form method="POST">
+        {% csrf_token %}
+        <label for="columns">Choose columns:</label>
+        <table>
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Column Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for column in columns %}
+                    <tr>
+                        <td><input type="checkbox" name="columns" value="{{ column }}"></td>
+                        <td>{{ column }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit">Submit</button>
+    </form>
+{% else %}
+    <p>No columns found.</p>
+{% endif %}
+<form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+</form>

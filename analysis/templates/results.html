@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Processing Results</title>
+    <style>
+        .results {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .chart-container {
+            flex: 1 1 400px;
+            min-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Processing Results</h2>
+    <div class="results">
+        {% if sentiment_results %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Text</th>
+                        <th>Sentiment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in sentiment_results %}
+                        <tr>
+                            <td>{{ result.text }}</td>
+                            <td>
+                                <ul>
+                                    <li>Positive: {{ result.positive }}</li>
+                                    <li>Negative: {{ result.negative }}</li>
+                                    <li>Neutral: {{ result.neutral }}</li> 
+                                </ul>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="chart-container">
+                {{ line_chart_html|safe }}
+            </div>
+            <div class="chart-container">
+                {{ bar_chart_html|safe }}
+            </div>
+            <div class="chart-container">
+                {{ pie_chart_html|safe }}
+            </div>
+            <div class="chart-container">
+                {{ scatter_plot_html|safe }}
+            </div>
+            <div class="chart-container">
+                {{ positive_words_chart_html|safe }}
+            </div>
+        {% else %}
+            <p>No results found.</p>
+        {% endif %}
+    </div>
+    <a href="{% url 'product-list' %}">Back to Files</a>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+    </form>
+</body>
+</html>
