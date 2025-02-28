@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class BrandConfig(AppConfig):
+class AnalysisConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'brand'
+    name = 'analysis'
