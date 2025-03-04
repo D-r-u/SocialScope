@@ -8,6 +8,8 @@ from django.views.generic import CreateView, ListView
 from .models import UserFile
 import pandas as pd
 import os
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.conf import settings
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
@@ -20,33 +22,50 @@ from collections import Counter
 # Create your views here.
 @login_required
 def upload_csv(request, product_id):
+    """Handles file upload and keyword selection without Django forms."""
     product = get_object_or_404(ProductsInventory, item_id=product_id, user=request.user)
-    
-    if request.method == "POST" and request.FILES.get("csv_file"):
-        file = request.FILES["csv_file"]
-        UserFile.objects.create(product=product, uploaded_file=file)
-        return redirect("sentiment-analysis", product_id=product.item_id)
-    
-    return redirect("sentiment-analysis", product_id=product.item_id)
 
-@login_required
-def select_keywords(request, product_id):
-    product = get_object_or_404(ProductsInventory, item_id=product_id, user=request.user)
-    
     if request.method == "POST":
+        print("➡️ POST request received")  # Debugging
+
+        # 1️⃣ Handle File Upload
+        if "uploaded_file" in request.FILES:
+            file_obj = request.FILES["uploaded_file"]
+            file_path = f"sentiment_csvs/{file_obj.name}"
+            saved_path = default_storage.save(file_path, ContentFile(file_obj.read()))
+
+            print(f"📁 File saved at: {saved_path}")
+
+            # Save file info to DB
+            uploaded_file = UserFile.objects.create(
+                user=request.user,
+                product=product,
+                uploaded_file=saved_path,
+            )
+        else:
+            print("❌ No file detected in request.FILES")
+
+        # 2️⃣ Handle Keyword Selection
         selected_keywords = request.POST.getlist("keywords")
         custom_keywords = request.POST.get("custom_keywords", "").strip()
         
         if custom_keywords:
             selected_keywords.append(custom_keywords)
 
-        # Store in latest analysis entry
-        analysis = UserFile.objects.filter(product=product).last()
-        if analysis:
-            analysis.keywords = selected_keywords
-            analysis.save()
+        # Save keywords to the last uploaded file
+        uploaded_file.keywords = selected_keywords
+        uploaded_file.save()
 
-    return redirect("sentiment-analysis", product_id=product.item_id)
+        return redirect("process-file", file_id=uploaded_file.id)
+
+
+    previous_analyses = UserFile.objects.filter(product=product).order_by('-timestamp')
+
+    return render(request, "sentiment-analysis.html", {
+        "product": product,
+        "previous_analyses": previous_analyses
+    })
+
 
 @login_required
 def sentiment_analysis(request, product_id):
@@ -90,7 +109,7 @@ def process_file(request, file_id):
     try:
         # Get the file uploaded by the user
         file_obj = UserFile.objects.get(id=file_id, user=request.user)
-        file_path = file_obj.cleaned_file.path if file_obj.cleaned_file else file_obj.file.path
+        file_path = file_obj.cleaned_file.path if file_obj.cleaned_file else file_obj.uploaded_file.path
 
         try:
             df = pd.read_csv(file_path)  # Read CSV file into a DataFrame
@@ -103,7 +122,7 @@ def process_file(request, file_id):
         if request.method == 'POST':
             selected_columns = request.POST.getlist('columns')  # Get selected columns from user
             if not selected_columns:
-                return render(request, 'files/select_columns.html', {'columns': column_list, 'error': "Please select at least one column."})
+                return render(request, 'select_columns.html', {'columns': column_list, 'error': "Please select at least one column."})
 
             # Sentiment analysis variables
             sentiment_results = []
@@ -170,7 +189,7 @@ def process_file(request, file_id):
             positive_words_chart = px.bar(positives_df, x='word', y='frequency', title='Most frequent words in Positive Reviews')
             positive_words_chart_html = positive_words_chart.to_html(full_html=False)
 
-            return render(request, 'files/results.html', {
+            return render(request, 'results.html', {
                 'sentiment_results': sentiment_results,
                 'line_chart_html': line_chart_html,
                 'bar_chart_html': bar_chart_html,
@@ -179,7 +198,7 @@ def process_file(request, file_id):
                 'positive_words_chart_html': positive_words_chart_html
             })
 
-        return render(request, 'files/select_columns.html', {'columns': column_list})
+        return render(request, 'select_columns.html', {'columns': column_list})
 
     except UserFile.DoesNotExist:
         return redirect('file_list')
@@ -189,5 +208,9 @@ def clean_csv(file_path):
     df = pd.read_csv(file_path)
     df_cleaned = df.dropna()  # Remove empty rows
     cleaned_file_path = os.path.join(settings.MEDIA_ROOT, 'cleaned', os.path.basename(file_path))
+    
+    # Ensure the 'cleaned' directory exists
+    os.makedirs(os.path.dirname(cleaned_file_path), exist_ok=True)
+    
     df_cleaned.to_csv(cleaned_file_path, index=False)  # Save cleaned CSV file
     return cleaned_file_path  # Return cleaned file path
