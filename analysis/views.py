@@ -26,15 +26,15 @@ def upload_csv(request, product_id):
     product = get_object_or_404(ProductsInventory, item_id=product_id, user=request.user)
 
     if request.method == "POST":
-        print("➡️ POST request received")  # Debugging
+        print("POST request received")  # Debugging
 
-        # 1️⃣ Handle File Upload
+        # Handle File Upload
         if "uploaded_file" in request.FILES:
             file_obj = request.FILES["uploaded_file"]
             file_path = f"sentiment_csvs/{file_obj.name}"
             saved_path = default_storage.save(file_path, ContentFile(file_obj.read()))
 
-            print(f"📁 File saved at: {saved_path}")
+            print(f"File saved at: {saved_path}")
 
             # Save file info to DB
             uploaded_file = UserFile.objects.create(
@@ -43,9 +43,9 @@ def upload_csv(request, product_id):
                 uploaded_file=saved_path,
             )
         else:
-            print("❌ No file detected in request.FILES")
+            print("No file detected in request.FILES")
 
-        # 2️⃣ Handle Keyword Selection
+        # 2️ Handle Keyword Selection
         selected_keywords = request.POST.getlist("keywords")
         custom_keywords = request.POST.get("custom_keywords", "").strip()
         
@@ -127,6 +127,7 @@ def process_file(request, file_id):
             # Sentiment analysis variables
             sentiment_results = []
             word_corpus_high = []
+            word_corpus_low = []
             positive_reviews = []
             neutral_reviews = []
             negative_reviews = []
@@ -143,15 +144,16 @@ def process_file(request, file_id):
                     word_corpus_high.extend(text.split())
                     positive_reviews.append(text)
                 elif sentiment['compound'] < -0.5:
+                    word_corpus_low.extend(text.split())
                     negative_reviews.append(text)
                 else:
                     neutral_reviews.append(text)
 
             # Limit the number of results to 10
-            sentiment_results = sentiment_results[:10]
+            #sentiment_results = sentiment_results[:10]
 
             # Prepare data for visualization
-            texts = [result['text'] for result in sentiment_results]
+            texts = [result['text'][0:5] for result in sentiment_results]
             positives = [result['sentiment']['pos'] for result in sentiment_results]
             neutrals = [result['sentiment']['neu'] for result in sentiment_results]
             negatives = [result['sentiment']['neg'] for result in sentiment_results]
@@ -160,8 +162,8 @@ def process_file(request, file_id):
             # Create various charts using Plotly
             # Line Chart
             line_chart = go.Figure()
-            line_chart.add_trace(go.Scatter(x=texts, y=compounds, mode='lines+markers', name='Compound', hoverinfo='x+y+text', text=texts))
-            line_chart.update_layout(title="Line Chart", xaxis_tickangle=-45)
+            line_chart.add_trace(go.Scatter(x=texts, y=compounds, mode='markers', name='Compound', hoverinfo='x+y+text'))
+            line_chart.update_layout(title="Line Chart", xaxis_tickangle=-45, autosize=True)
             line_chart_html = line_chart.to_html(full_html=False)
 
             # Bar Chart
@@ -169,7 +171,7 @@ def process_file(request, file_id):
             bar_chart.add_trace(go.Bar(x=texts, y=positives, name='Positive', hoverinfo='x+y+text', text=texts))
             bar_chart.add_trace(go.Bar(x=texts, y=neutrals, name='Neutral', hoverinfo='x+y+text', text=texts))
             bar_chart.add_trace(go.Bar(x=texts, y=negatives, name='Negative', hoverinfo='x+y+text', text=texts))
-            bar_chart.update_layout(title="Bar Chart", xaxis_tickangle=-45)
+            bar_chart.update_layout(title="Bar Chart", xaxis_tickangle=-45, autosize=True)
             bar_chart_html = bar_chart.to_html(full_html=False)
 
             # Pie Chart
@@ -181,13 +183,18 @@ def process_file(request, file_id):
             # Scatter Plot
             scatter_plot = go.Figure()
             scatter_plot.add_trace(go.Scatter(x=texts, y=compounds, mode='markers', name='Compound', hoverinfo='x+y+text', text=texts))
-            scatter_plot.update_layout(title="Scatter Plot", xaxis_tickangle=-45)
+            scatter_plot.update_layout(title="Scatter Plot", xaxis_tickangle=-45, autosize=True)
             scatter_plot_html = scatter_plot.to_html(full_html=False)
 
             # Bar chart for most frequent words in positive reviews
-            positives_df = pd.DataFrame(Counter(word_corpus_high).most_common(20), columns=['word', 'frequency'])
-            positive_words_chart = px.bar(positives_df, x='word', y='frequency', title='Most frequent words in Positive Reviews')
+            positives_df = pd.DataFrame(Counter(word_corpus_high).most_common(10), columns=['words', 'frequency'])
+            positive_words_chart = px.bar(positives_df, x='words', y='frequency', title='Most frequent words in Positive Reviews')
             positive_words_chart_html = positive_words_chart.to_html(full_html=False)
+
+            # Bar chart for most frequent words in negative reviews
+            negatives_df = pd.DataFrame(Counter(word_corpus_low).most_common(10), columns=['words', 'frequency'])
+            negative_words_chart = px.bar(negatives_df, x='words', y='frequency', title='Most frequent words in Negative Reviews')
+            negative_words_chart_html = negative_words_chart.to_html(full_html=False)
 
             return render(request, 'results.html', {
                 'sentiment_results': sentiment_results,
@@ -195,7 +202,8 @@ def process_file(request, file_id):
                 'bar_chart_html': bar_chart_html,
                 'pie_chart_html': pie_chart_html,
                 'scatter_plot_html': scatter_plot_html,
-                'positive_words_chart_html': positive_words_chart_html
+                'positive_words_chart_html': positive_words_chart_html,
+                'negative_words_chart_html': negative_words_chart_html
             })
 
         return render(request, 'select_columns.html', {'columns': column_list})

@@ -55,6 +55,9 @@
             <div class="chart-container">
                 {{ positive_words_chart_html|safe }}
             </div>
+            <div class="chart-container">
+                {{ negative_words_chart_html|safe }}
+            </div>
         {% else %}
             <p>No results found.</p>
         {% endif %}
